@@ -9,8 +9,9 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "fs-extra": "^11.3.0",
+    "glob": "^11.0.3",
     "vite": "^7.0.3"
-   
   },
   "dependencies": {
     "flatpickr": "^4.6.13",
