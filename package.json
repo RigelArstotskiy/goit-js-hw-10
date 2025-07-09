@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "vite": "^7.0.3"
+   
   },
   "dependencies": {
     "flatpickr": "^4.6.13",
