@@ -1,0 +1,58 @@
+import { defineConfig } from 'vite';
+import path from 'path';
+import fs from 'fs';
+
+export default defineConfig({
+  // Указываем корень проекта
+  root: __dirname,
+
+  // Настраиваем сервер разработки
+  server: {
+    open: '/index.html' // Автоматически открываем index.html
+  },
+
+  // Настройки сборки
+  build: {
+    // Выходная директория
+    outDir: 'dist',
+    
+    // Настройка Rollup
+    rollupOptions: {
+      // Динамическое создание точек входа для всех HTML-файлов
+      input: fs.readdirSync(__dirname)
+        .filter(file => path.extname(file) === '.html')
+        .reduce((entries, file) => {
+          entries[path.basename(file, '.html')] = path.resolve(__dirname, file);
+          return entries;
+        }, {})
+    }
+  },
+
+  // Разрешение путей
+  resolve: {
+    alias: {
+      // Алиас для удобного импорта из src
+      '@': path.resolve(__dirname, 'src')
+    }
+  },
+
+  // Настройки плагинов
+  plugins: [
+    // Плагин для обработки HTML
+    {
+      name: 'html-resource-handler',
+      transformIndexHtml(html, { path }) {
+        // Автоматически исправляем пути к ресурсам
+        return html.replace(
+          /(href|src)="(?!https?:\/\/)(.*?)"/g,
+          (match, attr, resourcePath) => {
+            if (resourcePath.startsWith('src/') || resourcePath.endsWith('.js') || resourcePath.endsWith('.css')) {
+              return `${attr}="/${resourcePath}"`;
+            }
+            return match;
+          }
+        );
+      }
+    }
+  ]
+});
