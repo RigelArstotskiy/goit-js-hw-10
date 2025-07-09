@@ -1,58 +1,108 @@
-import { defineConfig } from 'vite';
-import path from 'path';
-import fs from 'fs';
+// import { defineConfig } from 'vite';
+// import path from 'path';
+// import fs from 'fs';
 
-export default defineConfig({
-  // Указываем корень проекта
-  root: __dirname,
+// export default defineConfig({
+//   // Указываем корень проекта
+//   root: __dirname,
 
-  // Настраиваем сервер разработки
-  server: {
-    open: '/index.html' // Автоматически открываем index.html
-  },
+//   // Настраиваем сервер разработки
+//   server: {
+//     open: '/index.html' // Автоматически открываем index.html
+//   },
 
-  // Настройки сборки
-  build: {
-    // Выходная директория
-    outDir: 'dist',
+//   // Настройки сборки
+//   build: {
+//     // Выходная директория
+//     outDir: 'dist',
     
-    // Настройка Rollup
-    rollupOptions: {
-      // Динамическое создание точек входа для всех HTML-файлов
-      input: fs.readdirSync(__dirname)
-        .filter(file => path.extname(file) === '.html')
-        .reduce((entries, file) => {
-          entries[path.basename(file, '.html')] = path.resolve(__dirname, file);
-          return entries;
-        }, {})
-    }
-  },
+//     // Настройка Rollup
+//     rollupOptions: {
+//       // Динамическое создание точек входа для всех HTML-файлов
+//       input: fs.readdirSync(__dirname)
+//         .filter(file => path.extname(file) === '.html')
+//         .reduce((entries, file) => {
+//           entries[path.basename(file, '.html')] = path.resolve(__dirname, file);
+//           return entries;
+//         }, {})
+//     }
+//   },
 
-  // Разрешение путей
-  resolve: {
-    alias: {
-      // Алиас для удобного импорта из src
-      '@': path.resolve(__dirname, 'src')
-    }
-  },
+//   // Разрешение путей
+//   resolve: {
+//     alias: {
+//       // Алиас для удобного импорта из src
+//       '@': path.resolve(__dirname, 'src')
+//     }
+//   },
 
-  // Настройки плагинов
-  plugins: [
-    // Плагин для обработки HTML
-    {
-      name: 'html-resource-handler',
-      transformIndexHtml(html, { path }) {
-        // Автоматически исправляем пути к ресурсам
-        return html.replace(
-          /(href|src)="(?!https?:\/\/)(.*?)"/g,
-          (match, attr, resourcePath) => {
-            if (resourcePath.startsWith('src/') || resourcePath.endsWith('.js') || resourcePath.endsWith('.css')) {
-              return `${attr}="/${resourcePath}"`;
+//   // Настройки плагинов
+//   plugins: [
+//     // Плагин для обработки HTML
+//     {
+//       name: 'html-resource-handler',
+//       transformIndexHtml(html, { path }) {
+//         // Автоматически исправляем пути к ресурсам
+//         return html.replace(
+//           /(href|src)="(?!https?:\/\/)(.*?)"/g,
+//           (match, attr, resourcePath) => {
+//             if (resourcePath.startsWith('src/') || resourcePath.endsWith('.js') || resourcePath.endsWith('.css')) {
+//               return `${attr}="/${resourcePath}"`;
+//             }
+//             return match;
+//           }
+//         );
+//       }
+//     }
+//   ]
+// });
+
+
+import { defineConfig } from 'vite';
+import { glob } from 'glob';
+import injectHTML from 'vite-plugin-html-inject';
+import FullReload from 'vite-plugin-full-reload';
+import SortCss from 'postcss-sort-media-queries';
+
+export default defineConfig(({ command }) => {
+  return {
+    define: {
+      [command === 'serve' ? 'global' : '_global']: {},
+    },
+    root: 'src',
+    build: {
+      sourcemap: true,
+      rollupOptions: {
+        input: glob.sync('./src/*.html'),
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              return 'vendor';
             }
-            return match;
-          }
-        );
-      }
-    }
-  ]
+          },
+          entryFileNames: chunkInfo => {
+            if (chunkInfo.name === 'commonHelpers') {
+              return 'commonHelpers.js';
+            }
+            return '[name].js';
+          },
+          assetFileNames: assetInfo => {
+            if (assetInfo.name && assetInfo.name.endsWith('.html')) {
+              return '[name].[ext]';
+            }
+            return 'assets/[name]-[hash][extname]';
+          },
+        },
+      },
+      outDir: '../dist',
+      emptyOutDir: true,
+    },
+    plugins: [
+      injectHTML(),
+      FullReload(['./src/**/**.html']),
+      SortCss({
+        sort: 'mobile-first',
+      }),
+    ],
+  };
 });
